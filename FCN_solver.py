@@ -1,6 +1,8 @@
 import model_utils.solver as solver
 import model_utils.utils as utils
-
+import pysnooper
+import torch
+import numpy as np
 
 class FCN_solver(solver.common_solver):
     def __init__(self):
@@ -10,11 +12,13 @@ class FCN_solver(solver.common_solver):
         self.loss=[]
         self.psnrs=[]
         self.ssims=[]
+        self.best_value=0.0
 
     def get_defualt_config():
         config=solver.common_solver.get_defualt_config()
         config["mode"]="SID"
         config["learning_rate_decay_epochs"]=[2000]
+        return config
 
     def empty_data(self):
         self.images=[]
@@ -30,23 +34,28 @@ class FCN_solver(solver.common_solver):
 
     def forward(self,data):
         x,y,xishu=data
-        x=x.cuda()
+        x=x.cuda() 
         y=y.cuda()
         output=self.models[0](x)
         loss=torch.abs(y-output).mean()
         return output,y,loss
 
     def train(self):
-        y,loss=self.forward(self.request.data)
+        write_dict={}
+        output,y,loss=self.forward(self.request.data)
         loss.backward()
         self.optimize_all()
         self.zero_grad_for_all()
-        self.write_dict["train_loss"]=loss.detach().cpu().item()
+        write_dict["train_loss"]=loss.detach().cpu().item()
         if(self.request.step%20==0):
-            self.write_log(self.write_dict,self.request.step)
-            self.print_log(self.write_dict,self.epoch,self.iteration)
+            self.write_log(write_dict,self.request.step)
+            self.print_log(write_dict,self.request.epoch,self.request.iteration)
 
     def after_train(self):
+        if(self.request.epoch%10==0):
+            self.if_validate=True
+        else:
+            self.if_validate=False
         if(self.request.epoch in self.learning_rate_decay_epochs):
             for optimizer in self.optimizers:
                 for param_group in optimizer.param_groups:
@@ -65,13 +74,16 @@ class FCN_solver(solver.common_solver):
         y[y>1.0]=1.0
         y[y<0.0]=0.0
         for i in range(0,len(y)):
-            loss.append(np.abs(y-output).mean())
+            self.loss.append(np.abs(y[i]-output[i]).mean())
             psnr=utils.PSNR(output[i],y[i])
             ssim=utils.SSIM(output[i],y[i])
             self.psnrs.append(psnr)
-            self.ssim.append(ssim)
+            self.ssims.append(ssim)
         y=y*255
+        output=output*255
+        output=output.astype(np.uint8)
         y=y.astype(np.uint8)
+        y=np.concatenate((y,output),axis=2)
         for i in range(0,len(y)):
             self.images.append(y[i])
 
@@ -84,7 +96,10 @@ class FCN_solver(solver.common_solver):
         write_dict["test_loss"]=np.mean(np.array(self.loss))
         utils.write_images(self.images,self.request.epoch)
         self.write_log(write_dict,self.request.epoch)
-        self.print_log(write_dict,self.request,0)
+        self.print_log(write_dict,self.request.epoch,0)
+        if(write_dict["test_psnr"]>self.best_value):
+            self.best_value=write_dict["test_psnr"]
+            self.save_params("best")
         self.empty_data()
 
     def test(self):
@@ -92,3 +107,6 @@ class FCN_solver(solver.common_solver):
 
     def after_test(self):
         self.after_validate()
+
+
+    

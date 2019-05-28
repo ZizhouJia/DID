@@ -17,7 +17,7 @@ transform_img = transforms.Compose([
                     ])
 
 class OurDataset(Data.Dataset):
-    def __init__(self,dir = '/home/hda/nfs_disk/dataset/dark2light/',ps=512,type='train',imgtype='raw',return_ratio=False):
+    def __init__(self,dir = '/mnt/nfs_disk/data/dark2light/',ps=512,type='train',imgtype='raw',return_ratio=False):
         if(type=='train'):
             self.type='0'
         elif(type=='test'):
@@ -140,3 +140,4 @@ class OurDataset(Data.Dataset):
 
     def __len__(self):
         return len(self.train_ids)
+        #return 2

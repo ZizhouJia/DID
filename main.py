@@ -7,8 +7,8 @@ import model
 import model_utils.runner as R
 
 def generate_dataset(batch_size):
-    thu_nigth=dataset.THUNight_static.OurDataset(return_ratio=True)
-    loader=Data.DataLoader(thu_ngith,batch_size=batch_size,shuffle=True)
+    thu_night=dataset.THUNight_static.OurDataset(return_ratio=True)
+    loader=Data.DataLoader(thu_night,batch_size=batch_size,shuffle=True)
     return loader,loader,loader
 
 def generate_optimizer(models,learning_rate,weight_decay=0.0005):
