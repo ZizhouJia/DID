@@ -5,7 +5,7 @@ import torch
 import numpy as np
 
 class FCN_solver(solver.common_solver):
-    def __init__(self):
+    def __init__(self,saveimg_path):
         super(FCN_solver,self).__init__()
         self.images=[]
         self.counts=[]
@@ -13,9 +13,10 @@ class FCN_solver(solver.common_solver):
         self.psnrs=[]
         self.ssims=[]
         self.best_value=0.0
+        self.saveimg_path=saveimg_path
 
-    def get_defualt_config():
-        config=solver.common_solver.get_defualt_config()
+    def get_default_config():
+        config=solver.common_solver.get_default_config()
         config["mode"]="SID"
         config["learning_rate_decay_epochs"]=[2000]
         return config
@@ -33,8 +34,8 @@ class FCN_solver(solver.common_solver):
         self.learning_rate_decay_epochs=self.config["learning_rate_decay_epochs"]
 
     def forward(self,data):
-        x,y,xishu=data
-        x=x.cuda() 
+        x,y,id=data
+        x=x.cuda()
         y=y.cuda()
         output=self.models[0](x)
         loss=torch.abs(y-output).mean()
@@ -94,7 +95,7 @@ class FCN_solver(solver.common_solver):
         write_dict["test_psnr"]=np.mean(np.array(self.psnrs))
         write_dict["test_ssim"]=np.mean(np.array(self.ssims))
         write_dict["test_loss"]=np.mean(np.array(self.loss))
-        utils.write_images(self.images,self.request.epoch)
+        utils.write_images(self.images,self.request.epoch,self.saveimg_path)
         self.write_log(write_dict,self.request.epoch)
         self.print_log(write_dict,self.request.epoch,0)
         if(write_dict["test_psnr"]>self.best_value):
@@ -107,6 +108,3 @@ class FCN_solver(solver.common_solver):
 
     def after_test(self):
         self.after_validate()
-
-
-    

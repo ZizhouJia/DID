@@ -4,3 +4,10 @@ checkpoints/*
 default_image_path/*
 *.zip
 *.tar
+checkpoints/*
+eval/*
+result_images/*
+test_results/*
+detection_utils/build/*
+*.so
+*.cu
