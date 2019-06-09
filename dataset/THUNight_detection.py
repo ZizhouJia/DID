@@ -243,7 +243,7 @@ class detection_dataset(torch.utils.data.Dataset):
         image=self.pull_image(index=index)
         return image.unsqueeze_(0)
 
-    def evaluate_detections(self, all_boxes, output_dir=None):
+    def evaluate_detections(self, all_boxes, output_dir=None,predict_path=None):
         """
         all_boxes is a list of length number-of-classes.
         Each list element is a list of length number-of-images.
@@ -252,6 +252,7 @@ class detection_dataset(torch.utils.data.Dataset):
 
         all_boxes[class][image] = [] or np.array of shape #dets x 5
         """
+        self.predict_path=predict_path
         self._write_voc_results_file(all_boxes)
         aps, map = self._do_python_eval(output_dir)
         return aps, map
@@ -259,7 +260,7 @@ class detection_dataset(torch.utils.data.Dataset):
     def _get_voc_results_file_template(self):
         filename = 'comp4_det_test' + '_{:s}.txt'
         filedir = os.path.join(
-            self.eval_path, 'results', 'THUNIGHT' + self._year, 'Main')
+            self.eval_path, 'results', 'THUNIGHT' + self._year, 'Main',self.predict_path)
         if not os.path.exists(filedir):
             os.makedirs(filedir)
         path = os.path.join(filedir, filename)

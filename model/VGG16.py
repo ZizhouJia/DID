@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 
 
-def vgg(cfg, batch_norm=False, pool5 = False, conv6_dilation=6):
+def vgg(cfg, batch_norm=False, pool5 = False, conv6_dilation=6,inc=3):
     layers = []
-    in_channels = 3
+    in_channels = inc
     for v in cfg:
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
@@ -32,9 +32,9 @@ vgg_config = [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'C', 512, 512, 512, 'M'
             512, 512, 512]
 class VGG16(nn.Module):
 
-    def __init__(self, fm_ids, pool5, conv6_dilation):
+    def __init__(self,fm_ids, pool5, conv6_dilation,inc):
         super(VGG16, self).__init__()
-        self.layers =nn.ModuleList(vgg(vgg_config, pool5=pool5, conv6_dilation=conv6_dilation))
+        self.layers =nn.ModuleList(vgg(vgg_config, pool5=pool5, conv6_dilation=conv6_dilation,inc=inc))
         self.fm_ids = fm_ids
 
     def forward(self, x):
@@ -45,6 +45,6 @@ class VGG16(nn.Module):
                 fms.append(x)
         return fms
 
-def  get_vgg16_fms(fm_ids = [22,34], pool5=False, conv6_dilation=6):
+def  get_vgg16_fms(fm_ids = [22,34], pool5=False, conv6_dilation=6,inc=3):
 
-    return VGG16(fm_ids, pool5, conv6_dilation)
+    return VGG16(fm_ids, pool5, conv6_dilation,inc)

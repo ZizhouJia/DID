@@ -14,7 +14,7 @@ import pickle
 
 
 class SSD_solver(solver.common_solver):
-    def __init__(self,saveimg_path,testresult_path,lighten_mode):
+    def __init__(self,saveimg_path,testresult_path,lighten_mode,pretrainedvgg):
         super(SSD_solver,self).__init__()
         self.images=[]
         self.counts=[]
@@ -30,6 +30,7 @@ class SSD_solver(solver.common_solver):
         self.lighten_mode=lighten_mode
         self.testset_num=50
         self.num_classes=4
+        self.pretrainedvgg=pretrainedvgg
         self.all_boxes= [[[] for _ in range(self.testset_num)]
                  for _ in range(self.num_classes)]
 
@@ -49,8 +50,7 @@ class SSD_solver(solver.common_solver):
         config["max_per_image"]=200
         config["thresh"]=0
         config["lighten_model_path"]=["checkpoints/HDRNet_raw4_batchsize_14_lr_0.01_task/201906030915/best/model-0.pkl",
-                                        "checkpoints/FCN_Fitting_raw_batchsize_2_lr_0.0001_task/201906031237/best/"]
-        config["pretrainedvgg"]=False
+                                        "checkpoints/FCN_Fitting_raw_batchsize_2_lr_0.0001_task/201906031250/best/"]
         return config
 
     def empty_data(self):
@@ -68,7 +68,6 @@ class SSD_solver(solver.common_solver):
         self.learning_rate_decay_epochs=self.config["learning_rate_decay_epochs"]
         self.max_per_image=self.config["max_per_image"]
         self.thresh=self.config["thresh"]
-        self.pretrainedvgg=self.config["pretrainedvgg"]
         self.models[0].module.init_model(self.basenet,self.pretrainedvgg)
         if(self.lighten_mode!="no"):
             if(len(self.models)==2):
@@ -109,7 +108,10 @@ class SSD_solver(solver.common_solver):
                 fit_ratio=self.models[2](imgs)
                 mulratio_imgs=imgs*fit_ratio.view(-1,1,1,1)
                 lighten_rgb=self.models[1](mulratio_imgs)
-        rgb_gen=self.norm_vgg(lighten_rgb)
+        if(lighten_rgb.size(1)==3):
+            rgb_gen=self.norm_vgg(lighten_rgb)
+        else:
+            rgb_gen=lighten_rgb
         out = self.models[0](rgb_gen)
         loss_l, loss_c = self.criterion(out, self.priors, targets)
         return rgb_gen,out,loss_l,loss_c
@@ -140,8 +142,6 @@ class SSD_solver(solver.common_solver):
 
 
     def validate(self):
-        if((self.request.epoch+1)%10!=0):
-            return
         rgb_gen,out,loss_l,loss_c=self.forward(self.request.data)
         self.counts.append(rgb_gen.size(0))
         rgb_gen=rgb_gen.detach().permute(0,2,3,1).cpu().numpy()
@@ -167,6 +167,7 @@ class SSD_solver(solver.common_solver):
         scale = torch.Tensor([5496,3670,
                               5496,3670]).cpu().numpy()
         boxes *= scale
+        i=self.request.step
         for j in range(1, self.num_classes):
             inds = np.where(scores[:, j] > self.thresh)[0]
             if len(inds) == 0:
@@ -192,12 +193,10 @@ class SSD_solver(solver.common_solver):
                     self.all_boxes[j][i] = self.all_boxes[j][i][keep, :]
 
     def after_validate(self):
-        if((self.request.epoch+1)%1!=0):
-            return
         with open(self.det_file, 'wb') as f:
             pickle.dump(self.all_boxes, f, pickle.HIGHEST_PROTOCOL)
         print('Evaluating detections')
-        APs, mAP = self.testset.evaluate_detections(self.all_boxes, self.testresult_path)
+        APs, mAP = self.testset.evaluate_detections(self.all_boxes, self.testresult_path,self.config["task_name"])
         write_dict={}
         write_dict["test_total_loss"]=np.mean(np.array(self.total_loss))
         write_dict["test_loc_loss"]=np.mean(np.array(self.loc_loss))

@@ -173,7 +173,7 @@ mbox = {
 
 class RFBNet(nn.Module):
 
-    def __init__(self, size=512, num_classes=4):
+    def __init__(self, size=512, num_classes=4,inc=3):
         super(RFBNet, self).__init__()
         self.num_classes = num_classes
         self.size = size
@@ -186,7 +186,7 @@ class RFBNet(nn.Module):
             print("Error: Sorry only SSD300 and SSD512 are supported!")
             return
         # vgg network
-        self.base = get_vgg16_fms()
+        self.base = get_vgg16_fms(inc=inc)
         # conv_4
         self.Norm = BasicRFB_a(512, 512, stride=1, scale=1.0)
         self.extras = nn.ModuleList(add_extras(size, extras[str(size)], 1024))
