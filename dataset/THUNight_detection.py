@@ -20,12 +20,14 @@ VOC_CLASSES = ('__background__', 'bicycle','car','person')
 
 class detection_dataset(torch.utils.data.Dataset):
     # img_shape,images input detection network
-    def __init__(self,root="/mnt/nfs_disk/data/detection/",image_type="raw",image_shape=(512,512),split='train',dataset_name='THUNIGHT',lighten=False,lightentype='hsv',lighten_net="unet",eval_path='eval/'):
+    def __init__(self,root="/home/huangxiaoyu/data/THUNIGHT/detection/",image_type="raw",image_shape=(512,512),split='train',dataset_name='THUNIGHT',lighten=False,lightentype='hsv',lighten_net="unet",eval_path='eval/'):
         img_shape=image_shape
-        # use unet fitting,before unet is 256,after unet is 512
+        # use unet fitting,before unet is 256,after unet is 512.for raw,512 packed 256;for rgb,resize to 256
         # use hdrnet,before is 512,after is 512.for raw,input is 1024*1024*3->512*512*4
         if(lighten_net!="unet" and image_type=='raw'):
             img_shape=(image_shape[0]*2,image_shape[1]*2)
+        if(lighten_net=="unet" and image_type=="rgb"):
+            img_shape=(image_shape[0]//2,image_shape[1]//2)
         self.lighten_type=lightentype
         self.lighten=lighten
         self.eval_path=eval_path

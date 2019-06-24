@@ -7,7 +7,7 @@ import model
 import model_utils.runner as R
 
 def generate_dataset(batch_size,imgtype='raw',lighten_net="unet"):
-    root="/mnt/nfs_disk/data/detection/"
+    root="/home/huangxiaoyu/data/THUNIGHT/detection/"
     thu_night_train=dataset.THUNight_detection.detection_dataset(root=root,image_type=imgtype,split='train',lighten_net=lighten_net)
     train_loader=Data.DataLoader(thu_night_train,batch_size=batch_size,shuffle=True,collate_fn=dataset.THUNight_detection.detection_collate)
     thu_night_test=dataset.THUNight_detection.detection_dataset(root=root,image_type=imgtype,split='test',lighten_net=lighten_net)
@@ -31,13 +31,13 @@ def generate_optimizer(models,learning_rate,weight_decay=1e-4,momentum=0.9):
             return [optimizer,optimizer_unet,optimizer_fit]
 
 batch_size=16
-type="raw"
+type="rgb"
 lighten_net="unet" #hdrnet,unet,no
 inc=4
 if(type=="rgb"):
     inc=3
 pretrainedvgg=True
-lr=[0.01,0.00001,0.00001]
+lr=[0.001,0,0]
 task_name="SSD_"+type+"_"+lighten_net+"_batchsize_"+str(batch_size)+"_lr_"+str(lr)+"_pretrainedvgg_"+str(pretrainedvgg)+"_task"
 
 config=SSD_solver.SSD_solver.get_default_config()
@@ -50,7 +50,7 @@ if lighten_net=='hdrnet':
     config["model_params"]=[{"size":512,"num_classes":4},{"inc":inc}]
 elif lighten_net=='unet':
     config["model_class"]=[model.RFB_Net_vgg.RFBNet,model.U_net.U_net,model.Net1.Net1]
-    config["model_params"]=[{"size":512,"num_classes":4},{},{}]
+    config["model_params"]=[{"size":512,"num_classes":4},{"input_depth":inc},{"in_channels":inc}]
 else:
     config["model_class"]=[model.RFB_Net_vgg.RFBNet,model.U_net.U_net]
     config["model_params"]=[{"size":512,"num_classes":4,"inc":inc},{}]
@@ -69,9 +69,13 @@ SSD_task={
 "config":config
 }
 
+
+
 tasks=[SSD_task]
 if __name__=="__main__":
     torch.multiprocessing.set_start_method('spawn', force=True)
+    torch.manual_seed(1234)
+    torch.cuda.manual_seed(1234)
     runner=R.runner()
     runner.generate_tasks(tasks)
     runner.main_loop()

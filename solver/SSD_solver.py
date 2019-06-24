@@ -24,13 +24,13 @@ class SSD_solver(solver.common_solver):
         self.best_value=100.0
 
         self.saveimg_path=saveimg_path
+        self.pretrainedvgg=pretrainedvgg
 
         self.basenet='detection_utils/weights/vgg16_reducedfc.pth'
         self.cfg=VOC_512
         self.lighten_mode=lighten_mode
         self.testset_num=50
         self.num_classes=4
-        self.pretrainedvgg=pretrainedvgg
         self.all_boxes= [[[] for _ in range(self.testset_num)]
                  for _ in range(self.num_classes)]
 
@@ -46,11 +46,12 @@ class SSD_solver(solver.common_solver):
     def get_default_config():
         config=solver.common_solver.get_default_config()
         config["mode"]="SSD"
-        config["learning_rate_decay_epochs"]=[200]
-        config["max_per_image"]=200
+        config["learning_rate_decay_epochs"]=[300]
+        config["max_per_image"]=300
         config["thresh"]=0
         config["lighten_model_path"]=["checkpoints/HDRNet_raw4_batchsize_14_lr_0.01_task/201906030915/best/model-0.pkl",
-                                        "checkpoints/FCN_Fitting_raw_batchsize_2_lr_0.0001_task/201906031250/best/"]
+                                        # "checkpoints/FCN_Fitting_raw_batchsize_2_lr_0.0001_task/201906031250/best/",
+                                        "checkpoints/FCN_Fitting_rgb_batchsize_2_lr_0.0001_task/201906230844/best/"]
         return config
 
     def empty_data(self):
@@ -73,12 +74,12 @@ class SSD_solver(solver.common_solver):
             if(len(self.models)==2):
                 # hdrnet
                 self.lighten_model_path=self.config["lighten_model_path"][0]
-                self.models[1].load_state_dict(torch.load(self.lighten_model_path,map_location={'cuda:2': 'cuda:0'}))
+                self.models[1].load_state_dict(torch.load(self.lighten_model_path))
             else:
                 # unet+fitting
                 self.lighten_model_path=self.config["lighten_model_path"][1]
-                self.models[1].load_state_dict(torch.load(self.lighten_model_path+'model-0.pkl',map_location={'cuda:2': 'cuda:0'}))
-                self.models[2].load_state_dict(torch.load(self.lighten_model_path+'model-1.pkl',map_location={'cuda:2': 'cuda:0'}))
+                self.models[1].load_state_dict(torch.load(self.lighten_model_path+'model-0.pkl'))
+                self.models[2].load_state_dict(torch.load(self.lighten_model_path+'model-1.pkl'))
         self.detector = Detect(self.num_classes, 0, self.cfg)
         self.criterion = MultiBoxLoss(self.num_classes, 0.5, True, 0, True, 3, 0.5, False)
         self.priorbox = PriorBox(self.cfg)
@@ -113,21 +114,22 @@ class SSD_solver(solver.common_solver):
         else:
             rgb_gen=lighten_rgb
         out = self.models[0](rgb_gen)
-        loss_l, loss_c = self.criterion(out, self.priors, targets)
-        return rgb_gen,out,loss_l,loss_c
+
+        return rgb_gen,out,targets
 
     def train(self):
         write_dict={}
-        rgb_gen,_,loss_l,loss_c=self.forward(self.request.data)
+        rgb_gen,out,targets=self.forward(self.request.data)
+        self.zero_grad_for_all()
+        loss_l, loss_c = self.criterion(out, self.priors, targets)
         loss = loss_l + loss_c
         loss.backward()
         self.optimize_all()
-        self.zero_grad_for_all()
         write_dict["train_total_loss"]=loss.detach().cpu().item()
         write_dict["train_loss_l"]=loss_l.detach().cpu().item()
         write_dict["train_loss_c"]=loss_c.detach().cpu().item()
         if(self.request.step%20==0):
-            self.write_log(write_dict,self.request.step)
+            self.write_log(write_dict,self.request.iteration)
             self.print_log(write_dict,self.request.epoch,self.request.iteration)
 
     def after_train(self):
@@ -142,7 +144,8 @@ class SSD_solver(solver.common_solver):
 
 
     def validate(self):
-        rgb_gen,out,loss_l,loss_c=self.forward(self.request.data)
+        rgb_gen,out,targets=self.forward(self.request.data)
+        loss_l, loss_c = self.criterion(out, self.priors, targets)
         self.counts.append(rgb_gen.size(0))
         rgb_gen=rgb_gen.detach().permute(0,2,3,1).cpu().numpy()
         rgb_gen[rgb_gen>1.0]=1.0

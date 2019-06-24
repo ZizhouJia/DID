@@ -123,6 +123,8 @@ class DifLightDataset(Data.Dataset):
                 rgb=cv2.imread(in_path)
                 im = cv2.cvtColor(rgb, cv2.COLOR_BGR2RGB)
                 max_pixel=255.0
+                if(self.usenet=='unet'):
+                    newsize=self.img_size//2
             newim=cv2.resize(im, (newsize,newsize), interpolation=cv2.INTER_AREA)
             self.input_images[ind][ridx]=newim
 
