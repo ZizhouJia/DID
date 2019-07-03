@@ -1,11 +1,10 @@
 import model_utils.solver as solver
 import model_utils.utils as utils
-import pysnooper
 import torch
 import numpy as np
 
 class FCN_solver(solver.common_solver):
-    def __init__(self,saveimg_path):
+    def __init__(self):
         super(FCN_solver,self).__init__()
         self.images=[]
         self.counts=[]
@@ -13,12 +12,12 @@ class FCN_solver(solver.common_solver):
         self.psnrs=[]
         self.ssims=[]
         self.best_value=0.0
-        self.saveimg_path=saveimg_path
 
+    @staticmethod
     def get_default_config():
-        config=solver.common_solver.get_default_config()
-        config["mode"]="SID"
-        config["learning_rate_decay_epochs"]=[2000]
+        config=solver.common_solver.get_defualt_config()
+        config.mode="SID"
+        config.learning_rate_decay_epochs=[2000]
         return config
 
     def empty_data(self):
@@ -30,8 +29,8 @@ class FCN_solver(solver.common_solver):
 
     def load_config(self):
         super(FCN_solver,self).load_config()
-        self.mode=self.config["mode"]
-        self.learning_rate_decay_epochs=self.config["learning_rate_decay_epochs"]
+        self.mode=self.config.mode
+        self.learning_rate_decay_epochs=self.config.learning_rate_decay_epochs
 
     def forward(self,data):
         x,y,id=data
@@ -49,8 +48,8 @@ class FCN_solver(solver.common_solver):
         self.zero_grad_for_all()
         write_dict["train_loss"]=loss.detach().cpu().item()
         if(self.request.step%20==0):
-            self.write_log(write_dict,self.request.step)
-            self.print_log(write_dict,self.request.epoch,self.request.iteration)
+            self.writer.write_board_line(write_dict,self.request.step)
+            self.writer.write_log(write_dict,self.request.epoch,self.request.iteration)
 
     def after_train(self):
         if(self.request.epoch%10==0):
@@ -95,12 +94,12 @@ class FCN_solver(solver.common_solver):
         write_dict["test_psnr"]=np.mean(np.array(self.psnrs))
         write_dict["test_ssim"]=np.mean(np.array(self.ssims))
         write_dict["test_loss"]=np.mean(np.array(self.loss))
-        utils.write_images(self.images,self.request.epoch,self.saveimg_path)
-        self.write_log(write_dict,self.request.epoch)
-        self.print_log(write_dict,self.request.epoch,0)
+        self.writer.write_file_image(self.images,self.request.epoch)
+        self.writer.write_board_line(write_dict,self.request.epoch)
+        self.writer.write_log(write_dict,self.request.epoch,0)
         if(write_dict["test_psnr"]>self.best_value):
             self.best_value=write_dict["test_psnr"]
-            self.save_params("best")
+            self.saver.save_params(self.models[0],self.get_task_identifier()+"_best.pkl")
         self.empty_data()
 
     def test(self):

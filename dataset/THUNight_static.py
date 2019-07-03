@@ -19,7 +19,7 @@ transform_img = transforms.Compose([
 class DifLightDataset(Data.Dataset):
     # return_ratio=True,get item return input_img(imgsize or imgsize/2),gt_img(imgsize),ratio_mat,id
     # return_ratio=False,get item return lighten input_img(imgsize or imgsize/2),gt_img(imgsize),id
-    def __init__(self,dir = '/home/hda/nfs_disk/data/dark2light/',imgsize=512,type='train',imgtype='raw',usenet='unet',usepack=True,return_ratio=True):
+    def __init__(self,dir = '/mnt/nfs_disk/data/dark2light/',imgsize=512,type='train',imgtype='raw',usenet='unet',usepack=True,return_ratio=True):
         self.usenet=usenet
         self.img_size=imgsize
         self.usepack=usepack
