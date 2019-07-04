@@ -1,4 +1,4 @@
-import FCN_solver
+from solver import FCN_solver
 import torch
 import torch.nn as nn
 import torch.utils.data as Data
@@ -22,16 +22,16 @@ usepack=True
 lr=0.0001
 task_name="SID_"+type+"_batchsize_"+str(batch_size)+"_lr_"+str(lr)+"_task"
 
-config=FCN_solver.FCN_solver.get_default_config()
-config["task_name"]=task_name
-config["epochs"]=4000
-config["dataset_function"]=generate_dataset
-config["dataset_function_params"]={"batch_size":2}
-config["model_class"]=[model.U_net.U_net]
-config["model_params"]=[{}]
-config["optimizer_function"]=generate_optimizer
-config["optimizer_params"]={"learning_rate":lr}
-config["mem_use"]=[10000,10000]
+config=FCN_solver.FCN_solver.get_defualt_config()
+config.task_name=task_name
+config.epochs=4000
+config.dataset_function=generate_dataset
+config.dataset_function_params={"batch_size":2}
+config.model_class=[model.U_net.U_net]
+config.model_params=[{"input_depth":4}]
+config.optimizer_function=generate_optimizer
+config.optimizer_params={"learning_rate":lr}
+config.memory_use=[10000,10000]
 
 SID_task={
 "solver":{"class":FCN_solver.FCN_solver,"params":{"saveimg_path","result_images/"+task_name}},
@@ -41,5 +41,5 @@ SID_task={
 tasks=[SID_task]
 
 runner=R.runner()
-runner.generate_tasks(tasks)
+runner.add_tasks(tasks)
 runner.main_loop()

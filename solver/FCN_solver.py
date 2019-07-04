@@ -15,10 +15,10 @@ class FCN_solver(solver.common_solver):
         self.best_value=0.0
         self.saveimg_path=saveimg_path
 
-    def get_default_config():
-        config=solver.common_solver.get_default_config()
-        config["mode"]="SID"
-        config["learning_rate_decay_epochs"]=[2000]
+    def get_defualt_config():
+        config=solver.common_solver.get_defualt_config()
+        config.mode="SID"
+        config.learning_rate_decay_epochs=[2000]
         return config
 
     def empty_data(self):
@@ -30,8 +30,8 @@ class FCN_solver(solver.common_solver):
 
     def load_config(self):
         super(FCN_solver,self).load_config()
-        self.mode=self.config["mode"]
-        self.learning_rate_decay_epochs=self.config["learning_rate_decay_epochs"]
+        self.mode=self.config.mode
+        self.learning_rate_decay_epochs=self.config.learning_rate_decay_epochs
 
     def forward(self,data):
         x,y,id=data
