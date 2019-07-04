@@ -7,7 +7,7 @@ import time
 class U_net(nn.Module):
     def __init__(self,input_depth=4,output_depth=12):
         super(U_net,self).__init__()
-        self.activate=nn.LeakyReLU(0.2)
+        self.activate=nn.LeakyReLU(0.2,True)
         kernels_list=[input_depth,32,64,128,256,512]
         self.down=nn.ModuleList()
         self.randint=np.random.randint(0,100000)
