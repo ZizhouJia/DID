@@ -19,6 +19,7 @@ class dark2light_dataset(Data.Dataset):
     def __init__(self,dir='/mnt/nfs_disk/data/dark2light/',img_size=512,img_type='raw',dataset='ours'):
         self.root=dir
         self.img_size=img_size
+        self.mode="train"
         self.dataset=dataset
         if(self.dataset=='ours'):
             self.input_dir=os.path.join(dir,img_type,'images')
@@ -120,6 +121,9 @@ class dark2light_dataset(Data.Dataset):
         gt_max_pixel=65535.0
         black_level=2048.0
 
+        gt_raw = rawpy.imread(gt_path)
+        in_raw = rawpy.imread(in_path)
+        
         if self.gt_images[ind] is None:
             gt_raw = rawpy.imread(gt_path)
             im = gt_raw.raw_image_visible.astype(np.uint16)
@@ -226,9 +230,11 @@ class dark2light_dataset(Data.Dataset):
 
     def __len__(self):
         if(self.mode=='train'):
-            return len(self.train_ids)
+            return 2
+            # return len(self.train_ids)
         else:
-            return len(self.test_ids)
+            return 2
+            # return len(self.test_ids)
 
 if __name__=='__main__':
     dataset=dark2light_dataset()

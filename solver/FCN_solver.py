@@ -3,6 +3,8 @@ import model_utils.utils as utils
 import torch
 import numpy as np
 
+
+
 class FCN_solver(solver.common_solver):
     def __init__(self):
         super(FCN_solver,self).__init__()
@@ -33,13 +35,26 @@ class FCN_solver(solver.common_solver):
         self.mode=self.config.mode
         self.learning_rate_decay_epochs=self.config.learning_rate_decay_epochs
 
+    def inference(self,images,ratio):
+        if(len(images.size())==3):
+            images=images.unsqueeze(0)
+        images=images*ratio
+        # images=padding_images(images)
+        output_images=self.models[0](images)
+        # output_images=cut_images(output_images.detach())
+        return output_images.detach().permute(0,2,3,1).cpu().numpy()
+
     def forward(self,data):
-        x,y,id=data
-        x=x.cuda()
+        id,ratio,x,y=data
+        x=x.cuda()*ratio.cuda().view(-1,1,1,1).float()
         y=y.cuda()
         output=self.models[0](x)
         loss=torch.abs(y-output).mean()
         return output,y,loss
+
+    def before_train(self):
+        self.train_loader.dataset.set_mode("train")
+        self.train_loader.dataset.set_return_array(["id","ratio","in_raw","gt_rgb"])
 
     def train(self):
         write_dict={}
@@ -53,8 +68,10 @@ class FCN_solver(solver.common_solver):
             self.writer.write_log(write_dict,self.request.epoch,self.request.iteration)
 
     def after_train(self):
-        if(self.request.epoch%10==0):
+        if(self.request.epoch%100==0):
             self.if_validate=True
+            self.train_loader.dataset.set_mode("test")
+            self.train_loader.dataset.set_return_array(["id","ratio","in_raw","gt_raw","in_rgb","gt_rgb","in_raw_ratio_rgb"])
         else:
             self.if_validate=False
         if(self.request.epoch in self.learning_rate_decay_epochs):
@@ -66,27 +83,31 @@ class FCN_solver(solver.common_solver):
     def validate(self):
         if(self.request.epoch%10!=0):
             return
-        output,y,loss=self.forward(self.request.data)
-        self.counts.append(y.size(0))
-        y=y.detach().permute(0,2,3,1).cpu().numpy()
-        output=output.detach().permute(0,2,3,1).cpu().numpy()
-        output[output>=1.0]=1.0
-        output[output<=0.0]=0.0
-        y[y>1.0]=1.0
-        y[y<0.0]=0.0
-        for i in range(0,len(y)):
-            self.loss.append(np.abs(y[i]-output[i]).mean())
-            psnr=utils.PSNR(output[i],y[i])
-            ssim=utils.SSIM(output[i],y[i])
+        id,ratio,in_raw,gt_raw,in_rgb,gt_rgb,in_raw_ratio_rgb=self.request.data
+        in_raw=in_raw.cuda()
+        self.counts.append(gt_rgb.size(0))
+        outputs=[]
+        for i in range(0,in_raw.size(0)):
+            output=self.inference(in_raw[0][:,:1600,:2400],ratio[0])
+            outputs.append(output)
+        outputs=np.concatenate(outputs,axis=0)
+        outputs[outputs>=1.0]=1.0
+        outputs[outputs<=0.0]=0.0
+        gt_rgb=gt_rgb.permute(0,2,3,1).numpy()[:,:3200,:4800,:]
+        in_rgb=in_rgb.permute(0,2,3,1).numpy()[:,:3200,:4800,:]
+        in_raw_ratio_rgb=in_raw_ratio_rgb.permute(0,2,3,1).numpy()[:,:3200,:4800,:]
+        for i in range(0,len(gt_rgb)):
+            self.loss.append(np.abs(gt_rgb[i]-outputs[i]).mean())
+            psnr=utils.PSNR(outputs[i],gt_rgb[i])
+            ssim=utils.SSIM(outputs[i],gt_rgb[i])
             self.psnrs.append(psnr)
             self.ssims.append(ssim)
-        y=y*255
-        output=output*255
-        output=output.astype(np.uint8)
-        y=y.astype(np.uint8)
-        y=np.concatenate((y,output),axis=2)
-        for i in range(0,len(y)):
-            self.images.append(y[i])
+
+        target_image=np.concatenate((in_rgb,in_raw_ratio_rgb,gt_rgb,outputs),axis=1)
+        target_image=target_image*255
+        target_image=target_image.astype(np.uint8)
+        for i in range(0,len(target_image)):
+            self.images.append(target_image[i])
 
     def after_validate(self):
         if(self.request.epoch%10!=0):
