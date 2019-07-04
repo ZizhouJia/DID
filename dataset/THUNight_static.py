@@ -19,10 +19,11 @@ transform_img = transforms.Compose([
 class DifLightDataset(Data.Dataset):
     # return_ratio=True,get item return input_img(imgsize or imgsize/2),gt_img(imgsize),ratio_mat,id
     # return_ratio=False,get item return lighten input_img(imgsize or imgsize/2),gt_img(imgsize),id
-    def __init__(self,dir = '/mnt/nfs_disk/data/dark2light/',imgsize=512,type='train',imgtype='raw',usenet='unet',usepack=True,return_ratio=True):
+    def __init__(self,dir = '/mnt/nfs_disk/data/dark2light/',imgsize=512,type='train',imgtype='raw',usenet='unet',usepack=True,return_ratio=True,resize=True):
         self.usenet=usenet
         self.img_size=imgsize
         self.usepack=usepack
+        self.resize=resize
         if(type=='train'):
             self.type='0'
         elif(type=='test'):
@@ -74,6 +75,23 @@ class DifLightDataset(Data.Dataset):
                            im[1:H:2,0:W:2,:]), axis=2)
         return out
 
+    def add_padding(self,images):
+        # usenet unet
+        if(self.img_type=="raw"):
+            # 1835*2748*4->(107,106,162,162)->2048*3072*4
+            new=np.zeros((2048,3072,4),dtype=np.uint8)
+            new[107:-106,162:-162,:]=images[:,:,:]
+            return new
+        else:
+            # 3648*5472*3
+            pass
+
+    def get_origin_rawpy(self,img_path,newsize):
+        raw = rawpy.imread(img_path)
+        im = raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=8)
+        # im=np.float32(im)/65535.0
+        newim=cv2.resize(im, (newsize,newsize), interpolation=cv2.INTER_AREA)
+        return newim
 
     def __getitem__(self,ind):
         # get the path from image id
@@ -103,7 +121,10 @@ class DifLightDataset(Data.Dataset):
                 gt_rgb=cv2.imread(gt_path)
                 im = cv2.cvtColor(gt_rgb, cv2.COLOR_BGR2RGB)
                 gt_max_pixel=255.0
-            gt_img=cv2.resize(im, (newsize,newsize) , interpolation=cv2.INTER_AREA)
+            if(self.resize):
+                gt_img=cv2.resize(im, (newsize,newsize) , interpolation=cv2.INTER_AREA)
+            else:
+                gt_img=im
             self.gt_images[ind] =gt_img
 
         if self.input_images[ind][ridx] is None:
@@ -125,8 +146,13 @@ class DifLightDataset(Data.Dataset):
                 max_pixel=255.0
                 if(self.usenet=='unet'):
                     newsize=self.img_size//2
-            newim=cv2.resize(im, (newsize,newsize), interpolation=cv2.INTER_AREA)
+            if(self.resize):
+                newim=cv2.resize(im, (newsize,newsize), interpolation=cv2.INTER_AREA)
+            else:
+                newim=self.add_padding(im)
             self.input_images[ind][ridx]=newim
+
+
 
 
         in_img=self.input_images[ind][ridx]
@@ -153,10 +179,19 @@ class DifLightDataset(Data.Dataset):
         gt_img = torch.from_numpy(gt_patch).permute(2,0,1)
 
         if(self.return_ratio):
-            # ratio_mat=torch.ones(in_img.size(1), in_img.size(2),1)*ratio
-            return in_img,gt_img,ratio,train_id
+            if(self.usenet=='unet' and self.img_type=='raw'):
+                origin_size=self.img_size
+                origin_rawpy=self.get_origin_rawpy(in_path,origin_size)
+                origin_rawpy=np.minimum(np.maximum(origin_rawpy,1),0)
+                origin_rawpy_torch=torch.from_numpy(origin_rawpy).permute(2,0,1)
+                return in_img,gt_img,ratio,train_id,origin_rawpy_torch
+            else:
+                return in_img,gt_img,ratio,train_id
         else:
             return in_img,gt_img,train_id
 
     def __len__(self):
         return len(self.train_ids)
+if __name__=="__main__":
+    DifLightDataset
+
