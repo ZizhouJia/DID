@@ -1,5 +1,7 @@
 *.pyc
 runs/*
+logs/*
+images/*
 checkpoints/*
 default_image_path/*
 *.zip
