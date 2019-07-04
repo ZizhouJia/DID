@@ -13,6 +13,7 @@ class FCN_solver(solver.common_solver):
         self.ssims=[]
         self.best_value=0.0
 
+
     @staticmethod
     def get_default_config():
         config=solver.common_solver.get_defualt_config()

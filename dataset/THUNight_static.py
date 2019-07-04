@@ -94,6 +94,8 @@ class DifLightDataset(Data.Dataset):
         return newim
 
     def __getitem__(self,ind):
+        # id,in_raw,ratio,in_raw_rgb,in_raw_ratio_rgb,gt_rgb,gt_raw
+
         # get the path from image id
         train_id = self.train_ids[ind]
         in_files = glob.glob((self.input_dir + '/%05d_0*.'+self.fntype)%train_id)
@@ -194,4 +196,3 @@ class DifLightDataset(Data.Dataset):
         return len(self.train_ids)
 if __name__=="__main__":
     DifLightDataset
-

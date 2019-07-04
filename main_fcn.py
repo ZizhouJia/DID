@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+from solver import FCN_solver
+=======
 import solver.FCN_solver as FCN_solver
+>>>>>>> 0ae49290142df43a050f5a3528f64cd6c8d0c1d7
 import torch
 import torch.nn as nn
 import torch.utils.data as Data
@@ -21,6 +25,7 @@ type="SID"
 usepack=True
 lr=0.0001
 task_name="SID_"+type+"_batchsize_"+str(batch_size)+"_lr_"+str(lr)+"_task"
+
 
 config=FCN_solver.FCN_solver.get_default_config()
 config.task_name=task_name
