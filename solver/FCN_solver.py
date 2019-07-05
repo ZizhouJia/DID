@@ -81,8 +81,6 @@ class FCN_solver(solver.common_solver):
 
 
     def validate(self):
-        if(self.request.epoch%10!=0):
-            return
         id,ratio,in_raw,gt_raw,in_rgb,gt_rgb,in_raw_ratio_rgb=self.request.data
         in_raw=in_raw.cuda()
         self.counts.append(gt_rgb.size(0))
@@ -110,8 +108,6 @@ class FCN_solver(solver.common_solver):
             self.images.append(target_image[i])
 
     def after_validate(self):
-        if(self.request.epoch%10!=0):
-            return
         write_dict={}
         write_dict["test_psnr"]=np.mean(np.array(self.psnrs))
         write_dict["test_ssim"]=np.mean(np.array(self.ssims))

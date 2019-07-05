@@ -35,6 +35,9 @@ class dark2light_dataset(Data.Dataset):
         self.gt_images=[None]*3000
         self.input_images=[[None]*10 for i in range(3000)]
 
+        self.test_gt_images=[None]*50
+        self.test_input_images=[[None]*10 for i in range(50)]
+
     def init_ids(self):
         train_fns=glob.glob(self.gt_dir+'/0*'+self.fntype)
         train_ids=[]
@@ -123,23 +126,36 @@ class dark2light_dataset(Data.Dataset):
 
         gt_raw = rawpy.imread(gt_path)
         in_raw = rawpy.imread(in_path)
-        
-        if self.gt_images[ind] is None:
+
+        if(self.gt_images[ind] is None and self.mode == 'train'):
             gt_raw = rawpy.imread(gt_path)
             im = gt_raw.raw_image_visible.astype(np.uint16)
             # im = gt_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
             self.gt_images[ind] = im
 
-        if self.input_images[ind][ridx] is None:
+        if(self.input_images[ind][ridx] is None and self.mode == 'train'):
             in_raw = rawpy.imread(in_path)
             im = in_raw.raw_image_visible.astype(np.uint16)
             self.input_images[ind][ridx]=im
 
+        if( ind<len(self.test_ids) and self.mode == 'test' and self.test_gt_images[ind] is None):
+            gt_raw = rawpy.imread(gt_path)
+            im = gt_raw.raw_image_visible.astype(np.uint16)
+            # im = gt_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
+            self.test_gt_images[ind] = im
 
+        if( ind<len(self.test_ids) and self.mode == 'test' and  self.test_input_images[ind][ridx] is None):
+            in_raw = rawpy.imread(in_path)
+            im = in_raw.raw_image_visible.astype(np.uint16)
+            self.test_input_images[ind][ridx]=im
 
+        if(self.mode=='train'):
+            in_raw_one=self.input_images[ind][ridx]#[yy:yy+self.img_size,xx:xx+self.img_size]
+            gt_raw_one=self.gt_images[ind]#[yy:yy+self.img_size,xx:xx+self.img_size]
+        else:
+            in_raw_one=self.test_input_images[ind][ridx]#[yy:yy+self.img_size,xx:xx+self.img_size]
+            gt_raw_one=self.test_gt_images[ind]#[yy:yy+self.img_size,xx:xx+self.img_size]
 
-        in_raw_one=self.input_images[ind][ridx]#[yy:yy+self.img_size,xx:xx+self.img_size]
-        gt_raw_one=self.gt_images[ind]#[yy:yy+self.img_size,xx:xx+self.img_size]
         in_raw_four=self.pack_raw(in_raw_one,black_level)
         gt_raw_four=self.pack_raw(gt_raw_one,black_level)
 
@@ -230,11 +246,11 @@ class dark2light_dataset(Data.Dataset):
 
     def __len__(self):
         if(self.mode=='train'):
-            return 2
-            # return len(self.train_ids)
+            # return 4
+            return len(self.train_ids)
         else:
-            return 2
-            # return len(self.test_ids)
+            # return 2
+            return len(self.test_ids)
 
 if __name__=='__main__':
     dataset=dark2light_dataset()
