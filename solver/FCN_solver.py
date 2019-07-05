@@ -18,7 +18,7 @@ class FCN_solver(solver.common_solver):
 
     @staticmethod
     def get_default_config():
-        config=solver.common_solver.get_defualt_config()
+        config=solver.common_solver.get_default_config()
         config.mode="SID"
         config.learning_rate_decay_epochs=[2000]
         return config
