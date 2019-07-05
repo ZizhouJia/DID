@@ -32,6 +32,7 @@ config.model_params=[{}]
 config.optimizer_function=generate_optimizer
 config.optimizer_params={"learning_rate":lr}
 config.memory_use=[10000]
+# config.writer_open=False
 
 SID_task={
 "solver":{"class":FCN_solver.FCN_solver,"params":{}},
