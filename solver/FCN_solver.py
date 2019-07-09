@@ -2,7 +2,7 @@ import model_utils.solver as solver
 import model_utils.utils as utils
 import torch
 import numpy as np
-
+import time
 
 
 class FCN_solver(solver.common_solver):
@@ -44,6 +44,7 @@ class FCN_solver(solver.common_solver):
         # output_images=cut_images(output_images.detach())
         return output_images.detach().permute(0,2,3,1).cpu().numpy()
 
+
     def forward(self,data):
         id,ratio,x,y=data
         x=x.cuda()*ratio.cuda().view(-1,1,1,1).float()
@@ -52,9 +53,11 @@ class FCN_solver(solver.common_solver):
         loss=torch.abs(y-output).mean()
         return output,y,loss
 
+
     def before_train(self):
         self.train_loader.dataset.set_mode("train")
         self.train_loader.dataset.set_return_array(["id","ratio","in_raw","gt_rgb"])
+
 
     def train(self):
         write_dict={}
@@ -66,6 +69,7 @@ class FCN_solver(solver.common_solver):
         if(self.request.step%20==0):
             self.writer.write_board_line(write_dict,self.request.step)
             self.writer.write_log(write_dict,self.request.epoch,self.request.iteration)
+
 
     def after_train(self):
         if(self.request.epoch%100==0):
@@ -106,6 +110,7 @@ class FCN_solver(solver.common_solver):
         target_image=target_image.astype(np.uint8)
         for i in range(0,len(target_image)):
             self.images.append(target_image[i])
+
 
     def after_validate(self):
         write_dict={}
