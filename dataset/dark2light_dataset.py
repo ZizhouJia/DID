@@ -31,10 +31,10 @@ class dark2light_dataset(Data.Dataset):
             self.fntype='.ARW'
 
         self.init_ids()
-
+        # gt rgb3;input raw 4
         self.gt_images=[None]*3000
         self.input_images=[[None]*10 for i in range(3000)]
-
+        # gt raw 1,input raw 1
         self.test_gt_images=[None]*50
         self.test_input_images=[[None]*10 for i in range(50)]
 
@@ -124,19 +124,17 @@ class dark2light_dataset(Data.Dataset):
         gt_max_pixel=65535.0
         black_level=2048.0
 
-        gt_raw = rawpy.imread(gt_path)
-        in_raw = rawpy.imread(in_path)
-
         if(self.gt_images[ind] is None and self.mode == 'train'):
             gt_raw = rawpy.imread(gt_path)
             im = gt_raw.raw_image_visible.astype(np.uint16)
-            # im = gt_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
+            im = gt_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
             self.gt_images[ind] = im
 
         if(self.input_images[ind][ridx] is None and self.mode == 'train'):
             in_raw = rawpy.imread(in_path)
             im = in_raw.raw_image_visible.astype(np.uint16)
-            self.input_images[ind][ridx]=im
+            in_raw_four=self.pack_raw(im,black_level)
+            self.input_images[ind][ridx]=in_raw_four
 
         if( ind<len(self.test_ids) and self.mode == 'test' and self.test_gt_images[ind] is None):
             gt_raw = rawpy.imread(gt_path)
@@ -150,23 +148,22 @@ class dark2light_dataset(Data.Dataset):
             self.test_input_images[ind][ridx]=im
 
         if(self.mode=='train'):
-            in_raw_one=self.input_images[ind][ridx]#[yy:yy+self.img_size,xx:xx+self.img_size]
-            gt_raw_one=self.gt_images[ind]#[yy:yy+self.img_size,xx:xx+self.img_size]
+            in_raw_four=self.input_images[ind][ridx]#[yy:yy+self.img_size,xx:xx+self.img_size]
+            gt_rgb=self.gt_images[ind]#[yy:yy+self.img_size,xx:xx+self.img_size]
+
+            # in_rgb=gt_rgb
+            # in_raw_ratio_rgb=gt_rgb
+            # gt_raw_four=in_raw_four
         else:
+            gt_raw = rawpy.imread(gt_path)
+            in_raw = rawpy.imread(in_path)
             in_raw_one=self.test_input_images[ind][ridx]#[yy:yy+self.img_size,xx:xx+self.img_size]
             gt_raw_one=self.test_gt_images[ind]#[yy:yy+self.img_size,xx:xx+self.img_size]
 
-        in_raw_four=self.pack_raw(in_raw_one,black_level)
+            in_raw_four=self.pack_raw(in_raw_one,black_level)
 
-        gt_raw.raw_image_visible[:]=gt_raw_one
-
-        gt_rgb=gt_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
-
-        if(self.mode=='train'):
-            in_rgb=gt_rgb
-            in_raw_ratio_rgb=gt_rgb
-            gt_raw_four=in_raw_four
-        else:
+            gt_raw.raw_image_visible[:]=gt_raw_one
+            gt_rgb=gt_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
             gt_raw_four=self.pack_raw(gt_raw_one,black_level)
             in_raw.raw_image_visible[:]=in_raw_one
             in_rgb=in_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
@@ -199,17 +196,15 @@ class dark2light_dataset(Data.Dataset):
                 in_raw_ratio_rgb = np.flip(in_raw_ratio_rgb, axis=0)
 
         if(self.mode=='train'):
-            H=self.input_images[ind][ridx].shape[0]//2
-            W=self.input_images[ind][ridx].shape[1]//2
+            H=self.input_images[ind][ridx].shape[0]#//2
+            W=self.input_images[ind][ridx].shape[1]#//2
 
             xx = np.random.randint(0, W - self.img_size)
             yy = np.random.randint(0, H - self.img_size)
 
             in_raw_four_tmp = in_raw_four[yy:yy+self.img_size,xx:xx+self.img_size,:]
-            # gt_raw_four_tmp = gt_raw_four[yy:yy+self.img_size,xx:xx+self.img_size,:]
-            # in_rgb_tmp = in_rgb[yy*2:yy*2+self.img_size*2,xx*2:xx*2+self.img_size*2,:]
+
             gt_rgb_tmp = gt_rgb[yy*2:yy*2+self.img_size*2,xx*2:xx*2+self.img_size*2,:]
-            # in_raw_ratio_rgb_tmp = in_raw_ratio_rgb[yy*2:yy*2+self.img_size*2,xx*2:xx*2+self.img_size*2,:]
 
         else:
             in_raw_four_tmp = in_raw_four
@@ -233,8 +228,6 @@ class dark2light_dataset(Data.Dataset):
             gt_raw_four_torch = torch.from_numpy(gt_raw_four_tmp).permute(2,0,1)
             in_rgb_torch = torch.from_numpy(in_rgb_tmp).permute(2,0,1)
             in_raw_ratio_rgb_torch = torch.from_numpy(in_raw_ratio_rgb_tmp).permute(2,0,1)
-
-
 
 
         if('id' in self.return_array):
