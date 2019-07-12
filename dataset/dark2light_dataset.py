@@ -172,14 +172,6 @@ class dark2light_dataset(Data.Dataset):
             in_raw_ratio_rgb=in_raw.postprocess(use_camera_wb=True, half_size=False, no_auto_bright=True, output_bps=16)
 
 
-        in_raw_four=np.float32(in_raw_four)/ (max_pixel-black_level)
-        gt_rgb = np.float32(gt_rgb)/gt_max_pixel
-        if(self.mode=='test'):
-            gt_raw_four = np.float32(gt_raw_four)/(max_pixel-black_level)
-            in_rgb=np.float32(in_rgb)/ gt_max_pixel
-            in_raw_ratio_rgb=np.float32(in_raw_ratio_rgb)/gt_max_pixel
-
-
         if np.random.randint(2,size=1)[0] == 1:  # random flip
             in_raw_four = np.flip(in_raw_four, axis=1)
             gt_rgb = np.flip(gt_rgb, axis=1)
@@ -194,6 +186,7 @@ class dark2light_dataset(Data.Dataset):
                 gt_raw_four = np.flip(gt_raw_four, axis=0)
                 in_rgb = np.flip(in_rgb, axis=0)
                 in_raw_ratio_rgb = np.flip(in_raw_ratio_rgb, axis=0)
+
 
         if(self.mode=='train'):
             H=self.input_images[ind][ridx].shape[0]#//2
@@ -212,6 +205,15 @@ class dark2light_dataset(Data.Dataset):
             in_rgb_tmp = in_rgb
             gt_rgb_tmp = gt_rgb
             in_raw_ratio_rgb_tmp = in_raw_ratio_rgb
+
+
+
+        in_raw_four_tmp=np.float32(in_raw_four_tmp)/ (max_pixel-black_level)
+        gt_rgb_tmp = np.float32(gt_rgb_tmp)/gt_max_pixel
+        if(self.mode=='test'):
+            gt_raw_four_tmp = np.float32(gt_raw_four_tmp)/(max_pixel-black_level)
+            in_rgb_tmp=np.float32(in_rgb_tmp)/ gt_max_pixel
+            in_raw_ratio_rgb_tmp=np.float32(in_raw_ratio_rgb_tmp)/gt_max_pixel
 
 
         in_raw_four_tmp = np.maximum(np.minimum(in_raw_four_tmp,1.0),0.0)
